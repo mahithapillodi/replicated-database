@@ -2,14 +2,14 @@ import grpc
 import kv_pb2
 import kv_pb2_grpc
 
-channel = grpc.insecure_channel('localhost:50051')
+channel = grpc.insecure_channel('128.110.217.146:50051')
 stub = kv_pb2_grpc.KeyValueServiceStub(channel)
 
 def put(key, value):
     request = kv_pb2.KeyValue(key=key, value=value)
     response = stub.Put(request)
     return response
-
+ 
 def get(key):
     request = kv_pb2.Key(key=key)
     try:

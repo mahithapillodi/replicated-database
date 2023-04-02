@@ -46,7 +46,8 @@ def get_leader():
     try:
         params = raft_pb2.Empty()
         response = stub.GetLeader(params)
-    except grpc.RpcError:
+    except grpc.RpcError as e:
+        print("gRPC error in get leader: ", e)
         server_failure()
         return
 
@@ -64,7 +65,8 @@ def suspend(period):
     try:
         params = raft_pb2.SuspendRequest(period=period)
         response = stub.Suspend(params)
-    except grpc.RpcError:
+    except grpc.RpcError as e:
+            print("gRPC error in suspend: ", e)
             server_failure()
             return
 
@@ -76,7 +78,8 @@ def set_val(key, value):
     try:
         params = raft_pb2.SetValRequest(key=key, value=value)
         response = stub.SetVal(params)
-    except grpc.RpcError:
+    except grpc.RpcError as e:
+            print("gRPC error in set value: ", e)
             server_failure()
             return
 
@@ -94,7 +97,8 @@ def get_val(key):
         else:
             print(response.value)
                     
-    except grpc.RpcError:
+    except grpc.RpcError  as e:
+            print("gRPC error in get value: ", e)
             server_failure()
             return
 

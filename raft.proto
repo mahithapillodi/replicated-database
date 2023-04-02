@@ -34,7 +34,6 @@ message TermLeaderIDPair {
     int32 leaderID = 2;
 }
 
-// TODO Ask ahmad about appropriate type of command
 message LogEntry {
     int32 term = 1;
     string command = 2;

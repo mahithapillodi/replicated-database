@@ -7,7 +7,7 @@ Created on Wed Mar 29 19:40:06 2023
 """
 import os 
 import sys
-sys.path = [os.getcwd()]
+#sys.path = [os.getcwd()]
 
 from leader import Leader
 from follower import Follower

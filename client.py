@@ -37,7 +37,7 @@ def parse( msg):
 def suspend():
     global SERVER
     channel = grpc.insecure_channel(SERVER)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
         params = raft_pb2.suspend_request(temp = 0) ##temp is meaningless... idk how to make an empty rpc msg
@@ -51,7 +51,7 @@ def suspend():
 def set_val(key, value):
     global SERVER
     channel = grpc.insecure_channel(SERVER)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
         params = raft_pb2.setVal_Request(key=key, value=value)
@@ -66,10 +66,10 @@ def get_val(key):
     global SERVER
 
     channel = grpc.insecure_channel(SERVER)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
-        params = raft_pb2.getVal_Request(key=key)
+        params = raft_pb2.getVal_request(key=key)
         response = stub.getVal(params)
 
         if response.outcome == False:

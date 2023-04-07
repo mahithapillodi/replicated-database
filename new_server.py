@@ -436,21 +436,15 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
                                                       term = replica_term)
         return heartbeat_reply
     
-    def getVal(source_node, dst_node, key):
-        resp_dst_node = source_node
-        resp_src_node = dst_node
+    def getVal(key):
         value = get_val(key)
         outcome = True if not value == "ERR" else False
-        response = raft_pb2.getVal_response(source_node = resp_src_node, dst_node = resp_dst_node, value = value,
-                                            outcome = outcome)
+        response = raft_pb2.getVal_response(value = value, outcome = outcome)
         return response
     
-    def setVal(source_node, dst_node, key, value):
-        resp_dst_node = source_node
-        resp_src_node = dst_node
+    def setVal(key, value):
         set = set_val(key, value)
-        response = raft_pb2.setVal_response(source_node = resp_src_node, dst_node = resp_dst_node,
-                                            outcome = set)
+        response = raft_pb2.setVal_response(outcome = set)
         return response
     
     def commitVal(source_node, dst_node, term, key):
@@ -463,11 +457,9 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
                                                term = replica_term, outcome = outcome)
         return response
 
-    def suspend(source_node, dst_node):
-        resp_dst_node = source_node
-        resp_src_node = dst_node
+    def suspend():
         set_suspended() 
-        response = raft_pb2.suspend_response(source_node = resp_src_node, dst_node = resp_dst_node)
+        response = raft_pb2.suspend_response(temp = 0)
         return response
     ##END HANDLE RPC CALLS....
 

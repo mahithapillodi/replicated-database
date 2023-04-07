@@ -207,7 +207,7 @@ def send_heartbeats():
         
         addr = SERVERS[server_key]
         channel = grpc.insecure_channel(addr)
-        stub = raft_pb2_grpc.RaftServiceStub(channel)
+        stub = raft_pb2_grpc.RaftStub(channel)
         params = raft_pb2.heartbeat(source_node = ID, dst_node = server_key, term = TERM)
         response = stub.heartbeatUpdate(params) ##response can be ignored...
     return
@@ -228,7 +228,7 @@ def send_appendEntry_requests():
                                 
             addr = SERVERS[server_key]
             channel = grpc.insecure_channel(addr)
-            stub = raft_pb2_grpc.RaftServiceStub(channel)
+            stub = raft_pb2_grpc.RaftStub(channel)
             
             params = raft_pb2.appendEntry(source_node = ID, dst_node = server_key, term = TERM,
                                           key = commit_key, value = commit_val)
@@ -248,7 +248,7 @@ def send_vote_4_mes():
                             
         addr = SERVERS[server_key]
         channel = grpc.insecure_channel(addr)
-        stub = raft_pb2_grpc.RaftServiceStub(channel)
+        stub = raft_pb2_grpc.RaftStub(channel)
         
         params = raft_pb2.vote_4_me(source_node = ID, dst_node = server_key, term = TERM)
         response = stub.VoteRequest(params)
@@ -265,7 +265,7 @@ def send_commit_requests(commit_key):
         
         addr = SERVERS[server_key]
         channel = grpc.insecure_channel(addr)
-        stub = raft_pb2_grpc.RaftServiceStub(channel)
+        stub = raft_pb2_grpc.RaftStub(channel)
 
         params = raft_pb2.commitVal_request(source_node = ID, dst_node = server_key, term = TERM, key = commit_key)
         response = stub.commitVal(params)
@@ -303,7 +303,7 @@ def init(server_id):
     global LOCAL_PENDING, REMOTE_PENDING ##handling pre-commit data
     
     LOCAL_PENDING = {} ##store data until committed
-    
+    REMOTE_PENDING = {} ##leader track what is stored on other replicas
     SERVERS = {}
     with open("config.conf", "r") as f:
         for line in f:
@@ -335,7 +335,7 @@ def event_loop():
     try:
         while True: 
             server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-            raft_pb2_grpc.add_RaftServiceServicer_to_server(RAFTServices(), server)
+            raft_pb2_grpc.add_RaftServicer_to_server(RAFTServices(), server)
             server.add_insecure_port(SERVERS[ID])
             server.start()
             
@@ -343,7 +343,7 @@ def event_loop():
                 server.stop(0)
                 time.sleep(5)
                 server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-                raft_pb2_grpc.add_RaftServiceServicer_to_server(RAFTServices(), server)
+                raft_pb2_grpc.add_RaftServicer_to_server(RAFTServices(), server)
                 server.add_insecure_port(SERVERS[ID])
                 server.start()
                 SUSPENDED = False
@@ -356,20 +356,20 @@ def event_loop():
                 send_heartbeats() #sends heartbeats
                 check_remote_pending() #checks if quorum of replicas have accepted appendEntry, if yes, send commit requests
                 send_appendEntry_requests() #sends appendEntries to replicas not in REMOTE_PENDING, if any exist for this term
-    except:
+    except Exception as e:
         ##KEYBOARD INTERRUPT... PRINT LOG & SAVE TO OUTPUT...
-        
+        print(e)
         try:
             with open('raft_db.pickle','rb') as handle:
                 COMMITTED_DB = pickle.load( handle ) ##load DB
         except:
             COMMITTED_DB = {}
-
-        LOG[TERM].append("[END OF SESSION] leader: %d\t term: %d" % (ELECTIONS[ max(ELECTIONS.keys())], TERM) )
-        LOG[TERM].append("[END OF SESSION] elections:", ELECTIONS)
-        LOG[TERM].append("[END OF SESSION] local pendingDB:", LOCAL_PENDING)
-        LOG[TERM].append("[END OF SESSION] remote pendingDB:", REMOTE_PENDING)
-        LOG[TERM].append("[END OF SESSION] commited_db:", COMMITTED_DB)
+        if ELECTIONS != {}:
+            LOG[TERM].append("[END OF SESSION] leader: %d\t term: %d" % (ELECTIONS[ max(ELECTIONS.keys())], TERM) )
+        LOG[TERM].append( str("[END OF SESSION] elections: " + str(list(ELECTIONS.items()))) )
+        LOG[TERM].append( str("[END OF SESSION] local pendingDB:" + str(list(LOCAL_PENDING.items()))) )
+        LOG[TERM].append( str("[END OF SESSION] remote pendingDB:" + str(list(REMOTE_PENDING.items()))) )
+        LOG[TERM].append( str("[END OF SESSION] commited_db:" + str(list(COMMITTED_DB.items()))) )
         
         ##turn off alarm...
         stop_timer()
@@ -463,4 +463,6 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
         return response
     ##END HANDLE RPC CALLS....
 
-
+if __name__ == "__main__":
+    init(1)
+    event_loop()

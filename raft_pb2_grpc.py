@@ -6,9 +6,7 @@ import raft_pb2 as raft__pb2
 
 
 class RaftStub(object):
-    """takes vote request, returns voted_4_u resp which indicates
-    if vote occurred or not...
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -54,12 +52,12 @@ class RaftStub(object):
 
 
 class RaftServicer(object):
-    """takes vote request, returns voted_4_u resp which indicates
-    if vote occurred or not...
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def VoteRequest(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """takes vote request, returns voted_4_u resp which indicates
+        if vote occurred or not...
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -77,7 +75,8 @@ class RaftServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def getVal(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """note : heartbeat_response will be empty
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -146,9 +145,7 @@ def add_RaftServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Raft(object):
-    """takes vote request, returns voted_4_u resp which indicates
-    if vote occurred or not...
-    """
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def VoteRequest(request,

@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Apr  6 18:22:33 2023
+
+@author: miaweaver
+"""
+
+syntax = "proto3";
+​
+service Raft {
+    // takes vote request, returns voted_4_u resp which indicates
+    // if vote occurred or not...
+​
+    rpc VoteRequest (vote_4_me) returns (voted_4_u) {};
+    rpc AppendEntryRequest (appendEntry) returns (appendEntry_pending) {};
+    rpc heartbeatUpdate (heartbeat) returns ( heartbeat_response ) {};
+    rpc getVal (getVal_request) returns  (getVal_response) {};
+    rpc setVal (setVal_request) returns (setVal_response) {};
+    rpc suspend (suspend_request) returns (suspend_response) {};
+    rpc commitVal (commitVal_request) returns (commitVal_response) {};
+    //note : heartbeat_response will be empty
+    
+    }
+    
+    
+message vote_4_me {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+}
+​
+message voted_4_u {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+  
+   bool outcome = 7; //True if voted for rpc sender, False otherwise...
+}
+​
+​
+message getVal_request {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+
+   string key = 4; //will be set to key of value to get
+}
+​
+message getVal_response {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+  
+   string value = 4; //will be set to key of value to get or put
+   bool outcome = 5; //True if get and value received... False otherwise...
+}
+​
+message setVal_request {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+  
+   string key = 4; //will be set to key to store value
+   string value = 5; //will be set to value to put in db
+}
+​
+message setVal_response {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+  
+   bool outcome = 4; //True if value pending commit on leader...
+}
+​
+message appendEntry {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+    
+   string key = 4; //will be set to key to store value
+   string value = 5; //will be set to value to put in db
+}
+​
+message appendEntry_pending {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+​
+   bool outcome = 4; //True if value pending on replica...
+}
+​
+message heartbeat {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+}
+​
+message heartbeat_response {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+   int32 term = 3;
+}
+​
+message suspend_request {
+   int32 source_node = 1;
+   int32 dst_node = 2;
+}
+​
+message suspend_response {
+  int32 source_node = 1;
+  int32 dst_node = 2;
+}
+
+message commitVal_request {
+  int32 source_node = 1;
+  int32 dst_node = 2;
+  int32 term = 3;
+  
+  string key = 4; //will be set to key to store value
+}
+
+message commitVal_response {
+  int32 source_node = 1;
+  int32 dst_node = 2;
+  int32 term = 3;
+  
+  bool outcome = 4;
+}

@@ -17,7 +17,7 @@ import math
 
 import pickle
 
-
+from datetime import datetime
 
 def set_timer(func, reset):
     global LOG, ALARM
@@ -43,6 +43,9 @@ def stop_timer():
 #
 ##########################################################################################
 def set_val(key, val):
+    global TIME_START
+    
+    TIME_START = datetime.now() ##reset start time...
     leader_id = None
     global LOCAL_PENDING, REMOTE_PENDING, ID, ELECTIONS, TERM
     
@@ -72,7 +75,7 @@ def get_val(key):
     return value, outcome
 
 def update_db(key, value):
-    global LOCAL_PENDING, TERM, DB_ENTRIES
+    global LOCAL_PENDING, TERM, DB_ENTRIES, TIME_START
     
     try:
         with open('raft_db.pickle','rb') as handle:
@@ -89,14 +92,16 @@ def update_db(key, value):
     
     db_ents_as_ints = [ int(i) for i in DB_ENTRIES.keys()]
     index = max(db_ents_as_ints) + 1
+    
     DB_ENTRIES[str(index)] = key
     COMMITTED_DB[str(key)] = str(value) #LOCAL_PENDING[TERM][key]
-    
+
     print("DB ENTRIES...", DB_ENTRIES)
     print("COMMITED_DB...", COMMITTED_DB)
     with open('raft_db.pickle','wb+') as handle:
         pickle.dump( COMMITTED_DB, handle, protocol=pickle.HIGHEST_PROTOCOL ) ##load DB
-    print("saves written...")
+    stop_time = datetime.now()
+    print("TIME FROM SET_VAL INVOCATION TO LOCAL COMMIT:", TIME_START - stop_time)
     return key in COMMITTED_DB
 
 
@@ -520,17 +525,21 @@ def send_vote_4_mes():
     return
 
 def send_commit_requests(commit_key):
-    global TERM, LOCAL_PENDING, REMOTE_PENDING, ID, SERVERS, TRACK_COMMITS
+    global TERM, LOCAL_PENDING, REMOTE_PENDING, ID, SERVERS, TRACK_COMMITS, TIME_START
+    
+    committed_on = []
     
     for server_key in SERVERS.keys():
         if TERM not in LOCAL_PENDING.keys():
             continue
+        
         if commit_key not in LOCAL_PENDING[TERM].keys():
             continue
         
         if TERM in TRACK_COMMITS.keys():
             if commit_key in TRACK_COMMITS[TERM].keys():
                 if server_key in TRACK_COMMITS[TERM][commit_key]:
+                    committed_on.append(server_key)
                     continue
             else:
                 TRACK_COMMITS[TERM][commit_key] = []
@@ -558,9 +567,14 @@ def send_commit_requests(commit_key):
                 if commit_key not in TRACK_COMMITS[TERM].keys():
                     TRACK_COMMITS[TERM][commit_key] = []
                 TRACK_COMMITS[TERM][commit_key].append(server_key)
+                committed_on.append(server_key)
+                
         except:
             print("The server %s is unavailable" % SERVERS[ID])
-        return
+    if len(committed_on) == 5:
+        stop_time = datetime.now()
+        print("TIME TO COMMIT ON ALL REPLICAS:", TIME_START - stop_time)
+    return
 
 def check_remote_pending():
     ##check REMOTE_PENDING... if any term has quorum of replicas pending on committing it,
@@ -713,7 +727,7 @@ def event_loop(server):
     i = 0
     while True:
         i+=1
-        
+        print("DB_ENTRIES:", DB_ENTRIES)
         if SUSPENDED: ##suspending to invoke leader re-election
             print("suspending til re-election...")
             server.stop(0)

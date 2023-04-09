@@ -398,13 +398,13 @@ def send_heartbeats():
             response = stub.heartbeatUpdate(params) ##response can be ignored...
             
             if response.term > TERM:
-                print("stale term... waiting to hear from new later...")
+                print("stale term... waiting to hear from new leader...")
                 STATE = "F"
                 TERM = response.term
-                print("Now following...")
+                #print("Now following...")
                 
             if not response.outcome:
-                print("updating replica log...")
+                #print("updating replica log...")
                 update_replica_log(server_key)
             
         except grpc.RpcError as e:
@@ -526,7 +526,7 @@ def send_vote_4_mes():
 
 def send_commit_requests(commit_key):
     global TERM, LOCAL_PENDING, REMOTE_PENDING, ID, SERVERS, TRACK_COMMITS, TIME_START
-    
+    print("Sending commit requests...")
     committed_on = []
     
     for server_key in SERVERS.keys():
@@ -546,7 +546,7 @@ def send_commit_requests(commit_key):
         else:
             TRACK_COMMITS[TERM] = {}
                 
-        print("sending commit request to...", server_key)
+        #print("sending commit request to...", server_key)
         
         if server_key == ID:
             continue
@@ -717,13 +717,13 @@ def init(server_id):
         print("starting election...")
         set_timer(invoke_election, reset = False)
         election(timeout = False)
-    print(STATE, TERM, PENDING_ELECTION, VOTED[TERM])    
+    print("INIT STATE:", STATE, "TERM:", TERM)    
     return
     
 
 def event_loop(server):      
     global SUSPENDED, TERM, STATE, SET_TIMER, RESET_TIMER
-    print("INIT STATE:", STATE)
+    #print("INIT STATE:", STATE)
     i = 0
     while True:
         i+=1
@@ -743,15 +743,15 @@ def event_loop(server):
 
         if STATE == "F": ###if follower do nothing
         
-            print("setting timers...")
+            #print("setting timers...")
             if not ALARM and SET_TIMER:
-                print("set timer...")
+                #print("set timer...")
                 try:
                     set_timer( invoke_election, reset = True )
                 except:
                     set_timer( invoke_election, reset = False )
             elif ALARM and RESET_TIMER:
-                print("timer reset...")
+                #print("timer reset...")
                 set_timer( invoke_election, reset = False )
             SET_TIMER, RESET_TIMER = False, False
                 
@@ -783,7 +783,7 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
         else:
             vote_4_me_reply = raft_pb2.voted_4_u(source_node = request.dst_node, dst_node = request.source_node,
                                                  term = replica_term, outcome = False)
-        print(vote_4_me_reply)
+        #print(vote_4_me_reply)
         return vote_4_me_reply
 
     def AppendEntryRequest(self, request, context): #source_node, dst_node, term, key, value):
@@ -802,10 +802,10 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
     
     def heartbeatUpdate(self, request, context): #source_node, dst_node, term):
         print("Receiving heartbeat...")
-        print("Leader:", request.source_node, "TERM:", request.term)
+        #print("Leader:", request.source_node, "TERM:", request.term)
         replica_term = get_term()
         replica_state = get_state()
-        print("STATE:", replica_state)
+        #print("STATE:", replica_state)
         
         logs_check = True
         if request.term >= replica_term:
@@ -824,14 +824,14 @@ class RAFTServices(raft_pb2_grpc.RaftServicer):
                 log_str = str("LEADER: New leader detected... Updating to term %d and switching to follower status..." % replica_term)
                 update_state("F")
                 
-            print("handling heartbeat...")
+        #    print("handling heartbeat...")
             handle_heartbeats(request.source_node, request.term)
             
-        print("putting together reply...")
+        #print("putting together reply...")
         ###COMPARE LOGS HERE...
         heartbeat_reply = raft_pb2.heartbeat_response(source_node = request.dst_node, dst_node = request.source_node,
                                                       term = replica_term, outcome = logs_check)
-        print(heartbeat_reply)
+        #print(heartbeat_reply)
         return heartbeat_reply
     
     def getVal(self, request, context):#key):

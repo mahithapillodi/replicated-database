@@ -1,140 +1,143 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr  7 10:06:58 2023
+
+@author: miaweaver
+"""
+
 import grpc
 import raft_pb2
 import raft_pb2_grpc
 import sys
 
-# The IP address and port number of the server to which commands will be issued
-server_ip_addr_port_num = ""
+    
+def parse( msg):
+    command =  msg.split(" ")[0]
+    parsed_msg =  msg.split(" ")
 
-# Print a message in case the current server is offline
-def server_failure():
-    print(f"The server {server_ip_addr_port_num} is unavailable")
-    return
-
-# Parse user input from command line
-def parse_user_input(message):
-    command = message.split(" ")[0]
-    parsed_message = message.split(" ")
-
-    if command == "connect":
-        return ("Connect", parsed_message[1])
-    elif command == "getleader":
-        return ("GetLeader", "GetLeader")
-    elif command == "suspend":
-        return ("Suspend", int(parsed_message[1]))
-    elif command == "setval":
-        return ("SetVal", parsed_message[1], parsed_message[2])
-    elif command == "getval":
-        return ("GetVal", parsed_message[1])
-    elif command == "quit":
-        return ("Quit", "quit")
-    else:
-        return ("Invalid", "invalid")
-
-# Set the global server variable to the provided one
-def connect(ip_addr_port_num):
-
-    global server_ip_addr_port_num
-
-    server_ip_addr_port_num = ip_addr_port_num
-
-# Issue a GetLeader command to the server
-def get_leader():
-    channel = grpc.insecure_channel(server_ip_addr_port_num)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
-
-    try:
-        params = raft_pb2.Empty()
-        response = stub.GetLeader(params)
-    except grpc.RpcError as e:
-        print("gRPC error in get leader: ", e)
-        server_failure()
-        return
-
-    if response.nodeId == -1:
-        print("No leader. This node hasn't voted for anyone in this term yet...")
+    if command == "connect" or command == "Connect":
+        return ["Connect", parsed_msg[1]]
+    
+    elif command == "suspend" or command == "Suspend":
+        return ["Suspend"]
+    
+    elif command == "put" or command == "Put":
+        return ["setVal", parsed_msg[1], parsed_msg[2]]
+    
+    elif command == "get" or command == "Get":
+        return ["getVal", parsed_msg[1]]
+    
+    elif command == "quit" or command == "Quit" or command == "Q":
+        return ["Quit"]
     
     else:
-        print(f"{response.nodeId} {response.nodeAddress}")
+        return ("Invalid")
 
-# Issue a Suspend command to the server
-def suspend(period):
-    channel = grpc.insecure_channel(server_ip_addr_port_num)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+def suspend():
+    global SERVER
+    channel = grpc.insecure_channel(SERVER)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
-        params = raft_pb2.SuspendRequest(period=period)
-        response = stub.Suspend(params)
+        params = raft_pb2.suspend_request(temp = 0) ##temp is meaningless... idk how to make an empty rpc msg
+        response = stub.suspend(params)
     except grpc.RpcError as e:
-            print("gRPC error in suspend: ", e)
-            server_failure()
-            return
+            print("gRPC ERR: ", e)
+            fail()
+    return
 
 # Issue a SetVal command to the server
 def set_val(key, value):
-    channel = grpc.insecure_channel(server_ip_addr_port_num)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+    global SERVER
+    channel = grpc.insecure_channel(SERVER)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
-        params = raft_pb2.SetValRequest(key=key, value=value)
-        response = stub.SetVal(params)
+        params = raft_pb2.setVal_request(key=key, value=value)
+        response = stub.setVal(params)
+        if not response.outcome:
+            print("connect to ", response.value, " to set values...")
     except grpc.RpcError as e:
-            print("gRPC error in set value: ", e)
-            server_failure()
-            return
+            print("gRPC ERR: ", e)
+            fail()
+    return
 
 # Issue a GetVal command to the server
 def get_val(key):
-    channel = grpc.insecure_channel(server_ip_addr_port_num)
-    stub = raft_pb2_grpc.RaftServiceStub(channel)
+    global SERVER
+
+    channel = grpc.insecure_channel(SERVER)
+    stub = raft_pb2_grpc.RaftStub(channel)
 
     try:
-        params = raft_pb2.GetValRequest(key=key)
-        response = stub.GetVal(params)
+        params = raft_pb2.getVal_request(key=key)
+        response = stub.getVal(params)
 
-        if response.verdict == False:
-            print("None")
+        if response.outcome == False:
+            print("ERROR: No value associated with key")
         else:
             print(response.value)
                     
     except grpc.RpcError  as e:
-            print("gRPC error in get value: ", e)
-            server_failure()
-            return
+            print("gRPC ERR: ", e)
+            fail()
+    return
 
 # Terminate the client
 def terminate():
-    print("The client ends")
+    print("Terminating client.")
     sys.exit(0)
+    
+def fail():
+    global SERVER
+    print("The server %s is unavailable" % SERVER)
+    return
+
+def connect(ip_addr_port_num):
+    global SERVER
+    SERVER = ip_addr_port_num
 
 # Initialize the client
 def init():
-    print("The client starts")
+    print("Initializing...")
+    
+    global SERVERS
+    SERVERS = {}
+    with open("config.conf", "r") as f:
+        for line in f:
+            SERVERS[int(line.split(" ")[0])] = f'{line.split(" ")[1]}:{line.split(" ")[2].rstrip()}'
+
+    print("SERVERS accepting connections:")
+    for node, ip_port in SERVERS.items():
+        print(node, ip_port)
 
     while True:
         try:
             user_input = input(">")
-            parsed_input = parse_user_input(user_input)
+            parsed_input = parse(user_input)
+            msg_type = parsed_input[0]
 
-            message_type = parsed_input[0]
-
-            if message_type == "Connect":
+            if  msg_type == "Connect" and len(parsed_input) >= 2 : ##make sure enough input to handle request
                 connect(parsed_input[1])
-            elif message_type == "GetLeader":
-                get_leader()
-            elif message_type == "Suspend":
-                suspend(parsed_input[1])
-            elif message_type == "SetVal":
+                
+            elif  msg_type == "Suspend":
+                suspend()
+                
+            elif  msg_type == "setVal" and len(parsed_input) >= 3: ##make sure enough input to handle request
                 set_val(parsed_input[1], parsed_input[2])
-            elif message_type == "GetVal":
+                
+            elif  msg_type == "getVal" and len(parsed_input) >= 2: ##make sure enough input to handle request
                 get_val(parsed_input[1])
-            elif message_type == "Quit":
+                
+            elif msg_type == "Quit":
                 terminate()
+                
             else:
                 print("Invalid command! Please try again.")
 
         except KeyboardInterrupt:
-            print("Use 'quit' to terminate the client program")
+            terminate()
 
 if __name__ == "__main__":
     init()

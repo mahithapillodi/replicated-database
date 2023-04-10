@@ -708,12 +708,12 @@ def init(server_id):
     
 
 def event_loop(server):      
-    global SUSPENDED, TERM, STATE, SET_TIMER, RESET_TIMER
+    global DB_ENTRIES, SUSPENDED, TERM, STATE, SET_TIMER, RESET_TIMER
     print("INIT STATE:", STATE)
     i = 0
     while True:
         i+=1
-        
+        print("DB_ENTRIES:", DB_ENTRIES)        
         if SUSPENDED: ##suspending to invoke leader re-election
             print("suspending til re-election...")
             server.stop(0)
